@@ -1,8 +1,21 @@
-FROM ubuntu:18.04
-CMD mv ./requirements.txt /tmp/
-CMD mv ./app.py /opt/webapp/
-RUN apt update
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q python-all python-pip 
-RUN pip install -qr /tmp/requirements.txt
-EXPOSE 5000
-CMD ["python", "/opt/webapp/app.py"]
+FROM ubuntu:18.04 
+#Устанавливаем базовый образ. Команда обязательна всегда, без нее работать не будет
+ADD ./* /opt/webapp/  
+# Копируем все файлы из репозитория в наш образ
+EXPOSE 5000  
+# Разрешаем открывать порт 5000. При запуске контейнера все равно надо указывать -p port:5000, потому что мы не открываем порт, а лишь разрешаем его использовать
+RUN apt update \ 
+# обновляем систему, без этого не работает
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y -q python-all python-pip \ 
+# устанавливаем питон и пип
+ && mv /opt/webapp/requirements.txt /tmp/ \ 
+# перемещаем файл с пакетами, которые надо установить в директорию /tmp как по условию задачи. Можно это сделать отдельным ADD, но тогда будет лишний слой и дубликат файла
+ && pip install -qr /tmp/requirements.txt \ 
+# устанавливаем пакеты из файла
+ && apt remove -y python-pip \  
+# удаляем pip, чтобы не занимал место
+ && rm -rf /var/lib/apt/lists/* \ 
+# чистим кеш
+# Все эти команды должны быть в одной команде RUN, чтобы образ был минимален. Вес образа равен сумме весов всех его слоев, поэтому не имет смысла удалять кеш и pip в других RUN'ах
+CMD ["python", "/opt/webapp/app.py"] 
+# указываем команду, с которой будет запускаться контейнер
